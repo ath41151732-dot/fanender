@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하이디(Hyuni) 덕질 아카이브</title>
+    <style>
+        :root { --p: #ff4d6d; --s: #ff85a1; --bg: #fff5f7; }
+        body { margin: 0; background: var(--bg); font-family: 'Apple SD Gothic Neo', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 30px 0; overflow-x: hidden; }
+        
+        /* 메인 카드 박스 */
+        .card { width: 90%; max-width: 380px; background: white; padding: 25px; border-radius: 40px; box-shadow: 0 20px 50px rgba(255, 77, 109, 0.15); position: relative; z-index: 10; }
+        
+        .video-container { width: 100%; height: 450px; background: #000; border-radius: 25px; overflow: hidden; position: relative; border: 4px solid #fff; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        h1 { font-size: 1.4rem; color: var(--p); margin: 0 0 15px 0; text-align: center; font-weight: 900; }
+        #msg { min-height: 60px; font-size: 1.1rem; font-weight: 700; color: #444; margin: 15px 0; text-align: center; line-height: 1.4; display: flex; align-items: center; justify-content: center; }
+
+        .btn-main { background: linear-gradient(45deg, var(--p), var(--s)); color: white; border: none; padding: 16px; border-radius: 20px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 10px 20px rgba(255, 77, 109, 0.2); transition: 0.2s; }
+        .btn-main:active { transform: scale(0.96); }
+        .btn-main:disabled { filter: grayscale(1); cursor: wait; }
+
+        /* ✨ 사진첩(Gallery) 진입 통로 스타일 */
+        .gallery-entrance { margin-top: 35px; display: flex; flex-direction: column; align-items: center; text-decoration: none; cursor: pointer; transition: 0.3s; }
+        .gallery-entrance:hover { transform: translateY(-5px); }
+        
+        .thumb-stack { width: 70px; height: 70px; position: relative; }
+        .thumb-img { width: 100%; height: 100%; object-fit: cover; border-radius: 15px; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.15); position: absolute; transition: 0.3s; }
+        
+        /* 최근 사진 겹치기 효과 */
+        .t1 { transform: rotate(-12deg) translateX(-10px); z-index: 1; opacity: 0.6; }
+        .t2 { transform: rotate(8deg); z-index: 2; }
+        
+        .gallery-label { font-size: 0.9rem; color: var(--p); margin-top: 12px; font-weight: 800; background: white; padding: 5px 15px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        /* 하트 파티클 */
+        .heart { position: fixed; pointer-events: none; z-index: 100; animation: fly linear forwards; }
+        @keyframes fly { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(1.5); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>✨ HYUNI ARCHIVE ✨</h1>
+        <div class="video-container">
+            <video id="vid" muted playsinline preload="auto">
+                <source src="hyuni_vid.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div id="msg">버튼을 눌러 오늘의 운세를 확인하세요!</div>
+        <button id="btn" class="btn-main" disabled>로딩 중...</button>
+    </div>
+
+    <a href="gallery.html" class="gallery-entrance">
+        <div class="thumb-stack">
+            <img src="gf (8).jpg" class="thumb-img t1">
+            <img src="gf (9).jpg" class="thumb-img t2">
+        </div>
+        <span class="gallery-label">PHOTO ALBUM 〉</span>
+    </a>
+
+<script>
+    const vid = document.getElementById('vid');
+    const btn = document.getElementById('btn');
+    const msg = document.getElementById('msg');
+
+    const data = [
+        { time: 1.2, text: "👌 하이디의 OK!<br>모든 일이 완벽하게 풀릴 거예요!" },
+        { time: 3.5, text: "👋 기분 좋은 인사!<br>새로운 설렘이 당신을 기다려요." },
+        { time: 6.2, text: "🥰 하트 뿅뿅!<br>사랑 가득한 하루가 될 거예요." },
+        { time: 8.8, text: "✨ 럭키 윙크!<br>생각지도 못한 행운이 찾아옵니다." },
+        { time: 12.5, text: "🍀 긍정 에너지!<br>오늘 하이디와 함께 화이팅!" }
+    ];
+
+    vid.addEventListener('canplaythrough', () => {
+        btn.innerText = "운세 뽑기 시작!";
+        btn.disabled = false;
+    });
+
+    function shootHearts() {
+        const emojis = ['❤️','💖','✨','💕','🥰'];
+        for(let i=0; i<20; i++){
+            const h = document.createElement('div');
+            h.classList.add('heart');
+            h.innerText = emojis[Math.floor(Math.random()*emojis.length)];
+            h.style.left = Math.random() * 100 + "vw";
+            h.style.top = "100vh";
+            h.style.fontSize = Math.random()*20+15+"px";
+            h.style.animationDuration = Math.random()*2+1+"s";
+            document.body.appendChild(h);
+            setTimeout(() => h.remove(), 2500);
+        }
+    }
+
+    btn.onclick = async () => {
+        btn.disabled = true;
+        msg.innerHTML = "하이디가 고민 중... 🔮";
+        
+        try {
+            vid.currentTime = 0;
+            vid.loop = true;
+            await vid.play();
+
+            setTimeout(() => {
+                vid.pause();
+                vid.loop = false;
+                const res = data[Math.floor(Math.random()*data.length)];
+                vid.currentTime = res.time;
+                msg.innerHTML = res.text;
+                shootHearts();
+                btn.disabled = false;
+                btn.innerText = "다시 뽑기";
+            }, 1800);
+        } catch(e) { btn.disabled = false; }
+    };
+</script>
+
+</body>
+</html>
