@@ -3,114 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>하이디 클라우드 사진첩</title>
+    <title>하이디 사진첩 🐾</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --p: #ff4d6d; --bg: #fff5f7; }
-        body { margin: 0; background: var(--bg); font-family: sans-serif; padding-bottom: 50px; }
-        .nav { position: sticky; top: 0; background: white; display: flex; align-items: center; padding: 15px 20px; z-index: 100; border-bottom: 1px solid #ffe0e5; }
-        .back-btn { text-decoration: none; color: var(--p); font-weight: bold; }
-        h1 { font-size: 1.1rem; flex-grow: 1; text-align: center; margin: 0; margin-right: 40px; }
-        .upload-section { padding: 20px; text-align: center; }
-        .upload-btn { background: var(--p); color: white; padding: 12px 25px; border-radius: 25px; cursor: pointer; display: inline-block; font-weight: bold; box-shadow: 0 4px 10px rgba(255, 77, 109, 0.3); }
-        #file-input { display: none; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
-        .grid img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; cursor: pointer; background: #eee; }
-        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        #modal img { max-width: 95%; max-height: 85%; }
+        :root { --main-color: #ff6b6b; --bg-color: #fff5f5; }
+        body { font-family: 'Nanum Gothic', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; text-align: center; }
+        .header { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        h1 { color: var(--main-color); margin: 0 0 10px 0; }
+        #count { color: #888; font-size: 14px; margin-bottom: 20px; }
+        .upload-btn { background: var(--main-color); color: white; padding: 15px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(255,107,107,0.3); }
+        .upload-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255,107,107,0.4); }
+        #loading { display: none; color: var(--main-color); font-weight: bold; margin-top: 15px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; padding: 10px; }
+        #photo-grid img { width: 100%; height: 250px; object-fit: cover; border-radius: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        #photo-grid img:hover { transform: scale(1.03); }
     </style>
 </head>
 <body>
 
-    <div class="nav">
-        <a href="index.html" class="back-btn">◀ 메인</a>
-        <h1 id="count">사진첩 로딩 중...</h1>
-    </div>
+<div class="header">
+    <h1>🐾 하이디 보관함</h1>
+    <p id="count">사진을 불러오는 중...</p>
+    <input type="file" id="photo-input" style="display: none;" accept="image/*">
+    <button class="upload-btn" onclick="document.getElementById('photo-input').click()">📸 하이디 사진 올리기</button>
+    <div id="loading">하이디 사진 전송 중... 🚀 (잠시만 기다려주세요!)</div>
+</div>
 
-    <div class="upload-section">
-        <label for="file-input" class="upload-btn">📸 하이디 사진 올리기</label>
-        <input type="file" id="file-input" accept="image/*" onchange="uploadPhoto(this)">
-    </div>
+<div id="photo-grid"></div>
 
-    <div class="grid" id="photo-grid"></div>
+<script>
+    // [1] Firebase 설정 : 방금 찾으신 최신값으로 넣어두었습니다!
+    const firebaseConfig = {
+        apiKey: "AIzaSyCJNwDkyHDZKOXGS-su1824U6AetbhgISE",
+        authDomain: "ji-hyun.firebaseapp.com",
+        projectId: "ji-hyun",
+        storageBucket: "ji-hyun.firebasestorage.app",
+        messagingSenderId: "632016266007",
+        appId: "1:632016266007:web:37d61d9221f43d0fe14d52"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    <div id="modal" onclick="this.style.display='none'"><img id="modal-img" src=""></div>
+    // [2] ImgBB 설정 : 카드 등록 없이 쓸 수 있는 사진 저장소 키입니다.
+    const IMGBB_API_KEY = "2744736d28ebf00992c6bdefe9519c13";
 
-    <script>
-        // 보내주신 설정값을 그대로 적용했습니다!
-        const firebaseConfig = {
-            apiKey: "AIzaSyCJNwDkyHDZKOXGS-su1824U6AetbhgISE",
-            authDomain: "ji-hyun.firebaseapp.com",
-            projectId: "ji-hyun",
-            storageBucket: "ji-hyun.firebasestorage.app",
-            messagingSenderId: "632016266007",
-            appId: "1:632016266007:web:37d61d9221f43d0fe14d52"
-        };
-        firebase.initializeApp(firebaseConfig);
+    // 로그인 및 데이터 로드 (실시간 연동)
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            loadPhotos(user.uid);
+        } else {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(() => location.reload());
+        }
+    });
 
-        const auth = firebase.auth();
-        const storage = firebase.storage();
-        const db = firebase.firestore();
+    // 업로드 로직 (ImgBB에 저장하고 주소만 Firestore에 기록)
+    document.getElementById('photo-input').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-        // 1. 로그인 상태 확인 및 사진 불러오기
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                loadPhotos(user.uid);
-            } else {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                auth.signInWithPopup(provider);
-            }
-        });
+        document.getElementById('loading').style.display = 'block';
 
-        // 2. 사진 업로드 함수
-        async function uploadPhoto(input) {
-            const file = input.files[0];
-            const user = auth.currentUser;
-            if (!file || !user) return;
+        try {
+            // A. ImgBB 서버로 사진 전송
+            const formData = new FormData();
+            formData.append("image", file);
 
-            document.getElementById('count').innerText = "업로드 중...🚀";
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: "POST",
+                body: formData
+            });
+            const result = await res.json();
             
-            try {
-                // Storage 창고에 저장
-                const ref = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
-                await ref.put(file);
-                const url = await ref.getDownloadURL();
+            if (result.success) {
+                const imageUrl = result.data.url;
 
-                // Firestore 장부에 기록
+                // B. Firestore에 이미지 주소 저장
                 await db.collection("photos").add({
-                    uid: user.uid,
-                    url: url,
+                    url: imageUrl,
+                    uid: auth.currentUser.uid,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-            } catch (e) {
-                alert("Storage가 아직 안 열려있거나 규칙 설정이 안 되었네요! 규칙 탭에서 allow read, write: if true;로 바꿔주세요.");
-                console.error(e);
+                alert("하이디 사진 업로드 성공! ✨");
             }
+        } catch (err) {
+            console.error("업로드 실패:", err);
+            alert("사진 전송에 실패했어요 ㅠㅠ 다시 시도해주세요!");
+        } finally {
+            document.getElementById('loading').style.display = 'none';
         }
+    };
 
-        // 3. 사진 리스트 실시간 로드
-        function loadPhotos(uid) {
-            db.collection("photos")
-              .where("uid", "==", uid)
-              .orderBy("createdAt", "desc")
-              .onSnapshot(snap => {
-                  const grid = document.getElementById('photo-grid');
-                  grid.innerHTML = '';
-                  document.getElementById('count').innerText = `모든 사진 (${snap.size})`;
-                  snap.forEach(doc => {
-                      const img = document.createElement('img');
-                      img.src = doc.data().url;
-                      img.onclick = () => {
-                          document.getElementById('modal-img').src = img.src;
-                          document.getElementById('modal').style.display = 'flex';
-                      };
-                      grid.appendChild(img);
-                  });
-              });
-        }
-    </script>
+    // 실시간 사진 불러오기 및 그리드 생성
+    function loadPhotos(uid) {
+        db.collection("photos")
+            .where("uid", "==", uid)
+            .orderBy("createdAt", "desc")
+            .onSnapshot(snap => {
+                const grid = document.getElementById('photo-grid');
+                grid.innerHTML = '';
+                document.getElementById('count').innerText = `총 ${snap.size}장의 하이디 사진이 보관되어 있습니다!`;
+                
+                snap.forEach(doc => {
+                    const img = document.createElement('img');
+                    img.src = doc.data().url;
+                    // 클릭하면 원본 사진 새창으로 보기
+                    img.onclick = () => window.open(img.src, '_blank');
+                    grid.appendChild(img);
+                });
+            }, err => {
+                console.error("데이터 로드 에러:", err);
+                if(err.message.includes('index')) {
+                    document.getElementById('count').innerText = "색인을 생성 중입니다... 약 1~2분 뒤 사진이 나타납니다.";
+                }
+            });
+    }
+</script>
 </body>
 </html>
